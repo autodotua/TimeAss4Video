@@ -6,8 +6,10 @@
     xmlns:local="clr-namespace:TimeAss4Video"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.modernwpf.com/2019"
-    x:Name="Window" Title="为录像添加时间字幕"
-    Width="900" Height="600"
+    x:Name="Window"
+    Title="为录像添加时间字幕"
+    Width="900"
+    Height="600"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
     Loaded="Window_Loaded"
@@ -21,20 +23,50 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Viewbox>
-            <Canvas
-                x:Name="cvs" Width="1920"
-                Height="1080" Background="Black" />
+            <Grid
+                x:Name="cvs"
+                Width="960"
+                Height="540"
+                Background="#333333">
+                <Grid.Resources>
+                    <local:Num2AlignmentConverter x:Key="n2a" />
+                    <local:Int2MarginConverter x:Key="i2m" />
+                </Grid.Resources>
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontSize="72"
+                    Opacity="0.3"
+                    Text="正在以两倍放大预览" />
+                <local:OutlinedTextBlock
+                    x:Name="tbkReview"
+                    Margin="{Binding Margin, Converter={StaticResource i2m}}"
+                    HorizontalAlignment="{Binding Alignment, Converter={StaticResource n2a}}"
+                    VerticalAlignment="Bottom"
+                    FontFamily="{Binding Font}"
+                    FontSize="{Binding Size}"
+                    Stroke="{Binding BorderColor}"
+                    StrokeThickness="{Binding BorderWidth}"
+                    Text="{Binding ReviewContent}">
+                    <local:OutlinedTextBlock.Fill>
+                        <SolidColorBrush Color="{Binding FontColor}" />
+                    </local:OutlinedTextBlock.Fill>
+                </local:OutlinedTextBlock>
+            </Grid>
         </Viewbox>
         <ui:SimpleStackPanel
-            Grid.Row="2" Margin="12"
-            Orientation="Horizontal" Spacing="24">
+            Grid.Row="2"
+            Margin="12"
+            HorizontalAlignment="Center"
+            Orientation="Horizontal"
+            Spacing="24">
             <ui:SimpleStackPanel.Resources>
                 <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type TextBox}">
-                    <Setter Property="Width" Value="240" />
+                    <Setter Property="Width" Value="180" />
                     <Setter Property="HorizontalAlignment" Value="Left" />
                 </Style>
                 <Style BasedOn="{StaticResource DefaultComboBoxStyle}" TargetType="{x:Type ComboBox}">
-                    <Setter Property="Width" Value="240" />
+                    <Setter Property="Width" Value="180" />
                     <Setter Property="HorizontalAlignment" Value="Left" />
                 </Style>
             </ui:SimpleStackPanel.Resources>
@@ -50,7 +82,8 @@
                         <Button
                             Grid.Column="2"
                             VerticalAlignment="Bottom"
-                            Click="Button_Click" Content="浏览" />
+                            Click="Button_Click"
+                            Content="浏览" />
                     </Grid>
                     <TextBox ui:ControlHelper.Header="开始时间" Text="{Binding StartTime, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}" />
                     <TextBox ui:ControlHelper.Header="视频长度" Text="{Binding Length}" />
@@ -59,30 +92,96 @@
             </GroupBox>
 
             <GroupBox Header="字幕">
-                <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
+                <ui:SimpleStackPanel Orientation="Horizontal" Spacing="8">
+                    <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
 
-                    <ComboBox
-                        ui:ControlHelper.Header="字幕格式"
-                        IsEditable="True"
-                        Text="{Binding Format}">
-                        <ComboBoxItem Content="yyyy-MM-dd HH:mm" />
-                        <ComboBoxItem Content="yyyy-MM-dd HH:mm:ss" />
-                        <ComboBoxItem Content="HH:mm" />
-                        <ComboBoxItem Content="HH:mm:ss" />
-                        <ComboBoxItem Content="HH:mm:ss:ff" />
-                    </ComboBox>
-                    <TextBox ui:ControlHelper.Header="更新间隔（毫秒）" Text="{Binding Interval}" />
+                        <ComboBox
+                            ui:ControlHelper.Header="字幕格式"
+                            IsEditable="True"
+                            Text="{Binding Format}">
+                            <ComboBoxItem Content="yyyy-MM-dd HH:mm" />
+                            <ComboBoxItem Content="yyyy-MM-dd HH:mm:ss" />
+                            <ComboBoxItem Content="HH:mm" />
+                            <ComboBoxItem Content="HH:mm:ss" />
+                            <ComboBoxItem Content="HH:mm:ss:ff" />
+                        </ComboBox>
+                        <TextBox ui:ControlHelper.Header="更新间隔（毫秒）" Text="{Binding Interval}" />
+                        <TextBox ui:ControlHelper.Header="字体大小" Text="{Binding Size}" />
+                        <TextBox ui:ControlHelper.Header="边距" Text="{Binding Margin}" />
+                        <ui:SimpleStackPanel Orientation="Horizontal">
+                            <ui:SimpleStackPanel.Resources>
+                                <local:AlignmentRadioButtonConverter x:Key="c" />
+                                <Style BasedOn="{StaticResource DefaultRadioButtonStyle}" TargetType="{x:Type RadioButton}">
+                                    <Setter Property="Margin" Value="0,0,-48,0" />
+                                </Style>
+                            </ui:SimpleStackPanel.Resources>
+                            <RadioButton Content="居左" IsChecked="{Binding Alignment, Converter={StaticResource c}, ConverterParameter=1}" />
+                            <RadioButton Content="居中" IsChecked="{Binding Alignment, Converter={StaticResource c}, ConverterParameter=2}" />
+                            <RadioButton Content="居右" IsChecked="{Binding Alignment, Converter={StaticResource c}, ConverterParameter=3}" />
+                        </ui:SimpleStackPanel>
+                    </ui:SimpleStackPanel>
+                    <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
+
+                        <ui:SimpleStackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SimpleStackPanel.Resources>
+                                <Style TargetType="{x:Type Canvas}">
+                                    <Setter Property="Width" Value="20" />
+                                    <Setter Property="Height" Value="20" />
+                                    <Setter Property="VerticalAlignment" Value="Bottom" />
+                                    <Setter Property="Margin" Value="0,0,0,8" />
+                                </Style>
+                            </ui:SimpleStackPanel.Resources>
+                            <TextBox ui:ControlHelper.Header="字体颜色" Text="{Binding FontColor}" />
+                            <Canvas>
+                                <Canvas.Background>
+                                    <SolidColorBrush Color="{Binding FontColor}" />
+                                </Canvas.Background>
+                            </Canvas>
+                        </ui:SimpleStackPanel>
+                        <ui:SimpleStackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:SimpleStackPanel.Resources>
+                                <Style TargetType="{x:Type Canvas}">
+                                    <Setter Property="Width" Value="20" />
+                                    <Setter Property="Height" Value="20" />
+                                    <Setter Property="VerticalAlignment" Value="Bottom" />
+                                    <Setter Property="Margin" Value="0,0,0,8" />
+                                </Style>
+                            </ui:SimpleStackPanel.Resources>
+                            <TextBox ui:ControlHelper.Header="边框颜色" Text="{Binding BorderColor}" />
+                            <Canvas>
+                                <Canvas.Background>
+                                    <SolidColorBrush Color="{Binding BorderColor}" />
+                                </Canvas.Background>
+                            </Canvas>
+                        </ui:SimpleStackPanel>
+                        <TextBox ui:ControlHelper.Header="边框粗细" Text="{Binding BorderWidth}" />
+                        <ComboBox
+                            ui:ControlHelper.Header="字体"
+                            ItemsSource="{Binding Fonts}"
+                            SelectedItem="{Binding Font}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock FontFamily="{Binding .}" Text="{Binding Source}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </ui:SimpleStackPanel>
                 </ui:SimpleStackPanel>
             </GroupBox>
             <GroupBox Header="操作">
                 <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
-                    <Button Content="生成" Click="Button_Click_2" />
+                    <Button
+                        Width="120"
+                        Click="Button_Click_2"
+                        Content="生成" />
                 </ui:SimpleStackPanel>
             </GroupBox>
         </ui:SimpleStackPanel>
         <ui:ContentDialog
-            x:Name="dialog" Title="注意"
-            Grid.RowSpan="999" Grid.ColumnSpan="999"
+            x:Name="dialog"
+            Title="注意"
+            Grid.RowSpan="999"
+            Grid.ColumnSpan="999"
             CloseButtonText="确定">
             <Grid>
                 <Grid.RowDefinitions>
