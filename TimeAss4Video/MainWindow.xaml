@@ -8,29 +8,40 @@
     xmlns:ui="http://schemas.modernwpf.com/2019"
     x:Name="Window"
     Title="为录像添加时间字幕"
-    Width="900"
+    Width="1000"
     Height="600"
+    MinWidth="800"
+    MinHeight="400"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
     Loaded="Window_Loaded"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
 
-    <Grid>
+    <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="8" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="24" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
         <Viewbox>
             <Grid
                 x:Name="cvs"
                 Width="960"
                 Height="540"
-                Background="#333333">
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
                 <Grid.Resources>
                     <local:Num2AlignmentConverter x:Key="n2a" />
                     <local:Int2MarginConverter x:Key="i2m" />
+                    <local:Color2BrushConverter x:Key="c2b" />
+                    <local:BoldBool2FontWeightConverter x:Key="b2w" />
+                    <local:ItalicBool2FontStyleConverter x:Key="i2s" />
+                    <local:UnderlineBool2TextDecorationConverter x:Key="u2d" />
                 </Grid.Resources>
                 <TextBlock
                     HorizontalAlignment="Center"
@@ -43,56 +54,70 @@
                     Margin="{Binding Margin, Converter={StaticResource i2m}}"
                     HorizontalAlignment="{Binding Alignment, Converter={StaticResource n2a}}"
                     VerticalAlignment="Bottom"
+                    Fill="{Binding FontColor, Converter={StaticResource c2b}}"
                     FontFamily="{Binding Font}"
                     FontSize="{Binding Size}"
-                    Stroke="{Binding BorderColor}"
+                    FontStyle="{Binding Italic, Converter={StaticResource i2s}}"
+                    FontWeight="{Binding Bold, Converter={StaticResource b2w}}"
+                    Stroke="{Binding BorderColor, Converter={StaticResource c2b}}"
                     StrokeThickness="{Binding BorderWidth}"
-                    Text="{Binding ReviewContent}">
-                    <local:OutlinedTextBlock.Fill>
-                        <SolidColorBrush Color="{Binding FontColor}" />
-                    </local:OutlinedTextBlock.Fill>
-                </local:OutlinedTextBlock>
+                    Text="{Binding ReviewContent}"
+                    TextDecorations="{Binding Underline, Converter={StaticResource u2d}}" />
             </Grid>
         </Viewbox>
+
+        <GroupBox Grid.Row="2" Header="文件">
+            <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <DataGrid
+                        MaxHeight="240"
+                        AutoGenerateColumns="False"
+                        CanUserDeleteRows="True"
+                        ItemsSource="{Binding Files}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Binding="{Binding Index}" IsReadOnly="True" Header="分段序号" />
+                            <DataGridTextColumn Binding="{Binding FilePath}" Header="模板文件" />
+                            <DataGridTextColumn Binding="{Binding Length, StringFormat=hh\\:mm\\:ss\\.fff}" Header="视频长度" />
+                            <DataGridTextColumn Binding="{Binding StartTime, StringFormat=yyyy-MM-dd HH:mm:ss.fff}" Header="开始时间" />
+                            <DataGridTextColumn Binding="{Binding EndTime, StringFormat=yyyy-MM-dd HH:mm:ss.fff}" IsReadOnly="True" Header="结束时间" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+                <ui:SimpleStackPanel Orientation="Horizontal" Spacing="12">
+                    <Button Click="AddNewFileButton_Click" Content="浏览" />
+                    <Button Click="GenerateVideoInfosButton_Click" Content="自动检测开始时间和视频长度" />
+                </ui:SimpleStackPanel>
+            </ui:SimpleStackPanel>
+        </GroupBox>
+
         <ui:SimpleStackPanel
-            Grid.Row="2"
+            Grid.RowSpan="99"
+            Grid.Column="2"
             Margin="12"
             HorizontalAlignment="Center"
             Orientation="Horizontal"
-            Spacing="24">
+            Spacing="48">
             <ui:SimpleStackPanel.Resources>
                 <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type TextBox}">
-                    <Setter Property="Width" Value="180" />
+                    <Setter Property="Width" Value="200" />
                     <Setter Property="HorizontalAlignment" Value="Left" />
                 </Style>
                 <Style BasedOn="{StaticResource DefaultComboBoxStyle}" TargetType="{x:Type ComboBox}">
-                    <Setter Property="Width" Value="180" />
+                    <Setter Property="Width" Value="200" />
                     <Setter Property="HorizontalAlignment" Value="Left" />
                 </Style>
             </ui:SimpleStackPanel.Resources>
-            <GroupBox Header="文件">
-                <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="12" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBox ui:ControlHelper.Header="视频文件" Text="{Binding FilePath}" />
-                        <Button
-                            Grid.Column="2"
-                            VerticalAlignment="Bottom"
-                            Click="Button_Click"
-                            Content="浏览" />
-                    </Grid>
-                    <TextBox ui:ControlHelper.Header="开始时间" Text="{Binding StartTime, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}" />
-                    <TextBox ui:ControlHelper.Header="视频长度" Text="{Binding Length}" />
-                    <Button Click="Button_Click_1" Content="自动检测开始时间和视频长度" />
-                </ui:SimpleStackPanel>
-            </GroupBox>
 
             <GroupBox Header="字幕">
-                <ui:SimpleStackPanel Orientation="Horizontal" Spacing="8">
+                <ScrollViewer
+                    Padding="0,0,20,0"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
                     <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
 
                         <ComboBox
@@ -119,8 +144,6 @@
                             <RadioButton Content="居中" IsChecked="{Binding Alignment, Converter={StaticResource c}, ConverterParameter=2}" />
                             <RadioButton Content="居右" IsChecked="{Binding Alignment, Converter={StaticResource c}, ConverterParameter=3}" />
                         </ui:SimpleStackPanel>
-                    </ui:SimpleStackPanel>
-                    <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
 
                         <ui:SimpleStackPanel Orientation="Horizontal" Spacing="8">
                             <ui:SimpleStackPanel.Resources>
@@ -165,17 +188,47 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
+                        <ui:SimpleStackPanel Orientation="Horizontal" Spacing="12">
+                            <ui:SimpleStackPanel.Resources>
+                                <Style BasedOn="{StaticResource DefaultCheckBoxStyle}" TargetType="{x:Type CheckBox}">
+                                    <Setter Property="Margin" Value="0,0,-60,0" />
+                                </Style>
+                            </ui:SimpleStackPanel.Resources>
+                            <CheckBox Content="粗体" IsChecked="{Binding Bold}" />
+                            <CheckBox Content="斜体" IsChecked="{Binding Italic}" />
+                            <CheckBox Content="下划线" IsChecked="{Binding Underline}" />
+                        </ui:SimpleStackPanel>
                     </ui:SimpleStackPanel>
-                </ui:SimpleStackPanel>
+                </ScrollViewer>
             </GroupBox>
-            <GroupBox Header="操作">
-                <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
+            <ui:SimpleStackPanel Orientation="Vertical" Spacing="12">
+                <GroupBox Header="分别导出">
                     <Button
                         Width="120"
-                        Click="Button_Click_2"
-                        Content="生成" />
-                </ui:SimpleStackPanel>
-            </GroupBox>
+                        Click="ExportSingleButton_Click"
+                        Content="导出" />
+                </GroupBox>
+                <GroupBox Header="合并导出">
+
+                    <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
+
+                        <TextBox
+                            ui:ControlHelper.Header="导出地址"
+                            MaxLines="5"
+                            Text="{Binding OutputPath}"
+                            TextWrapping="Wrap" />
+                        <Button
+                            Width="120"
+                            VerticalAlignment="Bottom"
+                            Click="SelectSavePathButton_Click"
+                            Content="浏览" />
+                        <Button
+                            Width="120"
+                            Click="ExportMergeButton_Click"
+                            Content="导出" />
+                    </ui:SimpleStackPanel>
+                </GroupBox>
+            </ui:SimpleStackPanel>
         </ui:SimpleStackPanel>
         <ui:ContentDialog
             x:Name="dialog"
@@ -189,7 +242,7 @@
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <TextBlock x:Name="tbkDialogMessage" />
+                <TextBlock x:Name="tbkDialogMessage" TextWrapping="Wrap" />
             </Grid>
         </ui:ContentDialog>
     </Grid>

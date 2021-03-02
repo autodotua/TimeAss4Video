@@ -1,157 +1,41 @@
-﻿using FzLib.Extension;
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 
 namespace TimeAss4Video
 {
-    public class MainWindowViewModel : ViewModelBase
-    {
-        private Timer timer;
-
-        public MainWindowViewModel(Window win) : base(win)
-        {
-            timer = new Timer(Interval);
-            timer.Elapsed += (p1, p2) =>
-            {
-                this.Notify(nameof(ReviewContent));
-            };
-            timer.Start();
-            Fonts = new System.Drawing.Text.InstalledFontCollection()
-                .Families
-                .Select(p => new FontFamily(p.Name))
-                .ToList();
-        }
-
-        public string ReviewContent => DateTime.Now.ToString(Format);
-
-        private string filePath = @"C:\Users\admin\Desktop\YDXJ0053.MP4";
-
-        public string FilePath
-        {
-            get => filePath;
-            set => this.SetValueAndNotify(ref filePath, value, nameof(FilePath));
-        }
-
-        private TimeSpan length = TimeSpan.Zero;
-
-        public TimeSpan Length
-        {
-            get => length;
-            set => this.SetValueAndNotify(ref length, value, nameof(Length));
-        }
-
-        private DateTime? startTime = null;
-
-        public DateTime? StartTime
-        {
-            get => startTime;
-            set => this.SetValueAndNotify(ref startTime, value, nameof(StartTime));
-        }
-
-        private string format = "HH:mm:ss";
-
-        public string Format
-        {
-            get => format;
-            set => this.SetValueAndNotify(ref format, value, nameof(Format));
-        }
-
-        private int interval = 1000;
-
-        public int Interval
-        {
-            get => interval;
-            set
-            {
-                this.SetValueAndNotify(ref interval, value, nameof(Interval));
-                timer.Interval = value;
-            }
-        }
-
-        private int size = 32;
-
-        public int Size
-        {
-            get => size;
-            set => this.SetValueAndNotify(ref size, value, nameof(Size));
-        }
-
-        private int margin = 20;
-
-        public int Margin
-        {
-            get => margin;
-            set => this.SetValueAndNotify(ref margin, value, nameof(Margin));
-        }
-
-        private int alignment = 3;
-
-        public int Alignment
-        {
-            get => alignment;
-            set => this.SetValueAndNotify(ref alignment, value, nameof(Alignment));
-        }
-
-        private FontFamily font = SystemFonts.MessageFontFamily;
-
-        public FontFamily Font
-        {
-            get => font;
-            set => this.SetValueAndNotify(ref font, value, nameof(Font));
-        }
-
-        private Color fontColor = Colors.White;
-
-        public Color FontColor
-        {
-            get => fontColor;
-            set => this.SetValueAndNotify(ref fontColor, value, nameof(FontColor));
-        }
-
-        private Color borderColor = Colors.Black;
-
-        public List<FontFamily> Fonts { get; }
-
-        public Color BorderColor
-        {
-            get => borderColor;
-            set => this.SetValueAndNotify(ref borderColor, value, nameof(BorderColor));
-        }
-
-        private int borderWidth = 3;
-
-        public int BorderWidth
-        {
-            get => borderWidth;
-            set => this.SetValueAndNotify(ref borderWidth, value, nameof(BorderWidth));
-        }
-    }
-
     public partial class MainWindow : Window
     {
         public MainWindowViewModel ViewModel { get; }
+        private const string ConfigPath = "config.json";
 
         public MainWindow()
         {
             InitializeComponent();
-            ViewModel = new MainWindowViewModel(this);
+            if (File.Exists(ConfigPath))
+            {
+                try
+                {
+                    ViewModel = JsonConvert.DeserializeObject<MainWindowViewModel>(File.ReadAllText(ConfigPath));
+                }
+                catch
+                {
+                    ViewModel = new MainWindowViewModel();
+                }
+            }
+            else
+            {
+                ViewModel = new MainWindowViewModel();
+            }
+            DataContext = ViewModel;
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
@@ -170,6 +54,7 @@ namespace TimeAss4Video
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            File.WriteAllText(ConfigPath, JsonConvert.SerializeObject(ViewModel));
         }
 
         public async Task ShowMessageAsync(string message)
@@ -178,144 +63,250 @@ namespace TimeAss4Video
             await dialog.ShowAsync();
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void AddNewFileButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog()
             {
                 Filter = "视频文件|*.mp4;*.mov;*.mkv;*.avi|所有文件|*.*",
+                Multiselect = true
             };
             if (dialog.ShowDialog() == true)
             {
-                ViewModel.FilePath = dialog.FileName;
+                foreach (var path in dialog.FileNames)
+                {
+                    ViewModel.Files.Add(new VideoFileInfo() { File = new FileInfo(path) });
+                }
             }
         }
 
-        private async void Button_Click_1(object sender, RoutedEventArgs e)
+        private async void GenerateVideoInfosButton_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(ViewModel.FilePath))
+            PreprocessFiles();
+            if (ViewModel.Files.Count == 0)
             {
-                await ShowMessageAsync("请先指定视频文件");
+                await ShowMessageAsync("没有任何文件");
                 return;
             }
-            if (!File.Exists(ViewModel.FilePath))
+            if (ViewModel.Files.Any(p => p.File == null))
             {
-                await ShowMessageAsync("指定的文件不存在");
+                await ShowMessageAsync("存在空的文件地址");
+                return;
+            }
+            if (ViewModel.Files.Any(p => !p.File.Exists))
+            {
+                await ShowMessageAsync("有的文件不存在");
                 return;
             }
             (sender as Button).IsEnabled = false;
-
-            try
+            List<VideoFileInfo> failedFiles = new List<VideoFileInfo>();
+            foreach (var file in ViewModel.Files)
             {
-                await Task.Run(() =>
+                try
                 {
-                    ProcessStartInfo startInfo = new ProcessStartInfo()
+                    await Task.Run(() =>
                     {
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardError = true,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                        FileName = "ffprobe",
-                        Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{ViewModel.FilePath}\""
-                    };
-
-                    Process p = new Process() { StartInfo = startInfo };
-                    p.Start();
-                    p.WaitForExit();
-                    var output = p.StandardOutput.ReadToEnd().Trim();
-                    if (double.TryParse(output, out double length))
-                    {
-                        ViewModel.Length = TimeSpan.FromSeconds(length);
-                    }
-                    else
-                    {
-                        throw new Exception("无法获取视频长度");
-                    }
-                    var modifiedTime = new FileInfo(ViewModel.FilePath).LastWriteTime;
-                    ViewModel.StartTime = modifiedTime - ViewModel.Length;
-                });
+                        if (AutoGenerateVideoInfo(file) == false)
+                        {
+                            failedFiles.Add(file);
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await ShowMessageAsync("自动检测失败：" + ex.Message);
+                }
             }
-            catch (Exception ex)
+            if (failedFiles.Count > 0)
             {
-                await ShowMessageAsync("自动检测失败：" + ex.Message);
+                await ShowMessageAsync("部分文件检测失败：" + string.Join('、', failedFiles.Select(p => p.File.Name)));
             }
             (sender as Button).IsEnabled = true;
         }
 
-        private async void Button_Click_2(object sender, RoutedEventArgs e)
+        private async void ExportSingleButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!ViewModel.StartTime.HasValue)
+            PreprocessFiles();
+            if (ViewModel.Files.Any(p => !p.StartTime.HasValue))
             {
                 await ShowMessageAsync("请设置视频开始时间");
                 return;
             }
-            if (string.IsNullOrWhiteSpace(ViewModel.FilePath))
+            if (ViewModel.Files.Any(p => p.Length.Equals(TimeSpan.Zero)))
             {
-                await ShowMessageAsync("请先指定视频文件");
+                await ShowMessageAsync("请设置视频长度");
                 return;
             }
             var btn = sender as Button;
             btn.IsEnabled = false;
             await Task.Run(() =>
             {
-                int size = ViewModel.Size;
-                int margin = ViewModel.Margin;
-                int al = ViewModel.Alignment;
-                int bw = ViewModel.BorderWidth;
-                var c = (byte.MaxValue - ViewModel.FontColor.A).ToString("X2") + ViewModel.FontColor.ToString()[3..];
-                var bc = (byte.MaxValue - ViewModel.BorderColor.A).ToString("X2") + ViewModel.BorderColor.ToString()[3..];
-                StringBuilder outputs = new StringBuilder();
-                outputs.AppendLine("[Script Info]")
-              .AppendLine("ScriptType: v4.00+")
-               .AppendLine("Collisions: Normal")
-               .AppendLine("PlayResX: 1920")
-               .AppendLine("PlayResY: 1080")
-               .AppendLine()
-               .AppendLine("[V4+ Styles]")
-               .AppendLine("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding")
-               .AppendLine($"Style: Default, Microsoft YaHei, {size}, &H{c}, &H{c}, &H{bc}, &H00000000, 0, 0, 0, 0, 100, 100, 0.00, 0.00, 1, {bw}, 0, {al}, {margin}, {margin}, {margin}, 0")
-               .AppendLine()
-               .AppendLine("[Events]")
-               .AppendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text");
-                string timespanFormat = "hh\\:mm\\:ss\\:ff";
-                for (TimeSpan time = TimeSpan.Zero; time <= ViewModel.Length; time = time.Add(TimeSpan.FromMilliseconds(ViewModel.Interval)))
+                foreach (var file in ViewModel.Files)
                 {
-                    outputs.Append($"Dialogue: 3,")
-                        .Append(time.ToString(timespanFormat))
-                        .Append(",")
-                        .Append(time.Add(TimeSpan.FromMilliseconds(ViewModel.Interval)).ToString(timespanFormat))
-                        .Append(",Default,,0000,0000,0000,,")
-                        .Append((ViewModel.StartTime.Value + time).ToString(ViewModel.Format))
-                        .AppendLine();
+                    Export(file);
                 }
-
-                string path = ViewModel.FilePath;
-                File.WriteAllText(Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(ViewModel.FilePath) + ".ass"), outputs.ToString());
             });
             btn.Content = "导出成功";
             await Task.Delay(1000);
             btn.Content = "导出";
             btn.IsEnabled = true;
         }
-    }
 
-    public class AlignmentRadioButtonConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        private void PreprocessFiles()
         {
-            return value.ToString() == parameter.ToString();
+            foreach (var file in ViewModel.Files.ToArray())
+            {
+                if (file.File == null && file.Length.Equals(TimeSpan.Zero) && !file.StartTime.HasValue)
+                {
+                    ViewModel.Files.Remove(file);
+                }
+            }
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        private async void ExportMergeButton_Click(object sender, RoutedEventArgs e)
         {
-            if ((bool?)value == true)
+            PreprocessFiles();
+            if (string.IsNullOrEmpty(ViewModel.OutputPath))
             {
-                return int.Parse(parameter as string);
+                await ShowMessageAsync("请设置输出路径");
+                return;
+            }
+            if (ViewModel.Files.Any(p => !p.StartTime.HasValue))
+            {
+                await ShowMessageAsync("请设置视频开始时间");
+                return;
+            }
+            if (ViewModel.Files.Any(p => p.Length.Equals(TimeSpan.Zero)))
+            {
+                await ShowMessageAsync("请设置视频长度");
+                return;
+            }
+            var btn = sender as Button;
+            btn.IsEnabled = false;
+            await Task.Run(() =>
+            {
+                Export(ViewModel.Files);
+            });
+            btn.Content = "导出成功";
+            await Task.Delay(1000);
+            btn.Content = "导出";
+            btn.IsEnabled = true;
+        }
+
+        private void SelectSavePathButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new SaveFileDialog()
+            {
+                Filter = "ASS字幕文件|*.ass",
+            };
+            if (dialog.ShowDialog() == true)
+            {
+                ViewModel.OutputPath = dialog.FileName;
+            }
+        }
+
+        private bool AutoGenerateVideoInfo(VideoFileInfo file)
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo()
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                FileName = "ffprobe",
+                Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{file.FilePath}\""
+            };
+
+            Process p = new Process() { StartInfo = startInfo };
+            p.Start();
+            p.WaitForExit();
+            var output = p.StandardOutput.ReadToEnd().Trim();
+            if (double.TryParse(output, out double length))
+            {
+                file.Length = TimeSpan.FromSeconds(length);
             }
             else
             {
-                return 0;
+                return false;
             }
+            var modifiedTime = file.File.LastWriteTime;
+            file.StartTime = modifiedTime - file.Length;
+            return true;
+        }
+
+        private void Export(VideoFileInfo file)
+        {
+            Export(new[] { file });
+        }
+
+        private void Export(IEnumerable<VideoFileInfo> files)
+        {
+            Export(files, ViewModel.OutputPath);
+        }
+
+        private void Export(IEnumerable<VideoFileInfo> files, string outputPath)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(outputPath));
+            StringBuilder outputs = GetAssHead();
+
+            string timespanFormat = "hh\\:mm\\:ss\\:ff";
+            var interval = TimeSpan.FromMilliseconds(ViewModel.Interval);
+            TimeSpan totalTime = TimeSpan.Zero;
+            foreach (var file in files)
+            {
+                TimeSpan currentTime = TimeSpan.Zero;
+                while (true)
+                {
+                    var nextTime = currentTime.Add(interval);
+                    if (nextTime > file.Length)
+                    {
+                        nextTime = file.Length;
+                    }
+                    outputs.Append($"Dialogue: 3,")
+                 .Append((totalTime + currentTime).ToString(timespanFormat))
+                 .Append(",")
+                 .Append((totalTime + nextTime).ToString(timespanFormat))
+                 .Append(",Default,,0000,0000,0000,,")
+                 .Append((file.StartTime.Value + currentTime).ToString(ViewModel.Format))
+                 .AppendLine();
+                    if (nextTime == file.Length)
+                    {
+                        break;
+                    }
+                    currentTime = nextTime;
+                }
+                totalTime += file.Length;
+            }
+            string path = Path.Combine(Path.GetDirectoryName(outputPath), Path.GetFileNameWithoutExtension(outputPath) + ".ass");
+            File.WriteAllText(path, outputs.ToString());
+        }
+
+        private StringBuilder GetAssHead()
+        {
+            int size = ViewModel.Size;
+            int margin = ViewModel.Margin;
+            int al = ViewModel.Alignment;
+            int bw = ViewModel.BorderWidth;
+            var c = (byte.MaxValue - ViewModel.FontColor.A).ToString("X2") + ViewModel.FontColor.ToString()[3..];
+            var bc = (byte.MaxValue - ViewModel.BorderColor.A).ToString("X2") + ViewModel.BorderColor.ToString()[3..];
+            int bold = ViewModel.Bold ? 1 : 0;
+            int italic = ViewModel.Italic ? 1 : 0;
+            int underline = ViewModel.Underline ? 1 : 0;
+
+            StringBuilder outputs = new StringBuilder();
+            outputs.AppendLine("[Script Info]")
+          .AppendLine("ScriptType: v4.00+")
+           .AppendLine("Collisions: Normal")
+           .AppendLine("PlayResX: 1920")
+           .AppendLine("PlayResY: 1080")
+           .AppendLine()
+           .AppendLine("[V4+ Styles]")
+           .AppendLine("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding")
+           .AppendLine($"Style: Default, Microsoft YaHei, {size}, &H{c}, &H{c}, &H{bc}, &H00000000, {bold}, {italic}, {underline}, 0, 100, 100, 0.00, 0.00, 1, {bw}, 0, {al}, {margin}, {margin}, {margin}, 0")
+           .AppendLine()
+           .AppendLine("[Events]")
+           .AppendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text");
+            return outputs;
         }
     }
 }
