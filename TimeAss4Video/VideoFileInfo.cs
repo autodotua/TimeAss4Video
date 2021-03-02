@@ -7,7 +7,7 @@ using System.IO;
 
 namespace TimeAss4Video
 {
-    public class VideoFileInfo : INotifyPropertyChanged
+    public class VideoFileInfo : INotifyPropertyChanged, IVideoFileInfo
     {
         private FileInfo file;
 

@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using static TimeAss4Video.AssUtility;
 
 namespace TimeAss4Video
 {
@@ -105,7 +106,7 @@ namespace TimeAss4Video
                 {
                     await Task.Run(() =>
                     {
-                        if (AutoGenerateVideoInfo(file) == false)
+                        if (AutoGenerateVideoInfo(ViewModel, file) == false)
                         {
                             failedFiles.Add(file);
                         }
@@ -142,7 +143,7 @@ namespace TimeAss4Video
             {
                 foreach (var file in ViewModel.Files)
                 {
-                    Export(file);
+                    Export(ViewModel, file);
                 }
             });
             btn.Content = "导出成功";
@@ -184,7 +185,7 @@ namespace TimeAss4Video
             btn.IsEnabled = false;
             await Task.Run(() =>
             {
-                Export(ViewModel.Files);
+                Export(ViewModel, ViewModel.Files);
             });
             btn.Content = "导出成功";
             await Task.Delay(1000);
@@ -204,109 +205,19 @@ namespace TimeAss4Video
             }
         }
 
-        private bool AutoGenerateVideoInfo(VideoFileInfo file)
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo()
+            var dialog = new OpenFileDialog()
             {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                FileName = "ffprobe",
-                Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{file.FilePath}\""
+                Filter = "ASS字幕文件|*.ass",
             };
-
-            Process p = new Process() { StartInfo = startInfo };
-            p.Start();
-            p.WaitForExit();
-            var output = p.StandardOutput.ReadToEnd().Trim();
-            if (double.TryParse(output, out double length))
+            if (dialog.ShowDialog() == true)
             {
-                file.Length = TimeSpan.FromSeconds(length);
-            }
-            else
-            {
-                return false;
-            }
-            var modifiedTime = file.File.LastWriteTime;
-            file.StartTime = modifiedTime - file.Length;
-            return true;
-        }
-
-        private void Export(VideoFileInfo file)
-        {
-            Export(new[] { file });
-        }
-
-        private void Export(IEnumerable<VideoFileInfo> files)
-        {
-            Export(files, ViewModel.OutputPath);
-        }
-
-        private void Export(IEnumerable<VideoFileInfo> files, string outputPath)
-        {
-            Debug.Assert(!string.IsNullOrEmpty(outputPath));
-            StringBuilder outputs = GetAssHead();
-
-            string timespanFormat = "hh\\:mm\\:ss\\:ff";
-            var interval = TimeSpan.FromMilliseconds(ViewModel.Interval);
-            TimeSpan totalTime = TimeSpan.Zero;
-            foreach (var file in files)
-            {
-                TimeSpan currentTime = TimeSpan.Zero;
-                while (true)
+                foreach (var file in ImportFromAss(dialog.FileName))
                 {
-                    var nextTime = currentTime.Add(interval);
-                    if (nextTime > file.Length)
-                    {
-                        nextTime = file.Length;
-                    }
-                    outputs.Append($"Dialogue: 3,")
-                 .Append((totalTime + currentTime).ToString(timespanFormat))
-                 .Append(",")
-                 .Append((totalTime + nextTime).ToString(timespanFormat))
-                 .Append(",Default,,0000,0000,0000,,")
-                 .Append((file.StartTime.Value + currentTime).ToString(ViewModel.Format))
-                 .AppendLine();
-                    if (nextTime == file.Length)
-                    {
-                        break;
-                    }
-                    currentTime = nextTime;
+                    ViewModel.Files.Add(file);
                 }
-                totalTime += file.Length;
             }
-            string path = Path.Combine(Path.GetDirectoryName(outputPath), Path.GetFileNameWithoutExtension(outputPath) + ".ass");
-            File.WriteAllText(path, outputs.ToString());
-        }
-
-        private StringBuilder GetAssHead()
-        {
-            int size = ViewModel.Size;
-            int margin = ViewModel.Margin;
-            int al = ViewModel.Alignment;
-            int bw = ViewModel.BorderWidth;
-            var c = (byte.MaxValue - ViewModel.FontColor.A).ToString("X2") + ViewModel.FontColor.ToString()[3..];
-            var bc = (byte.MaxValue - ViewModel.BorderColor.A).ToString("X2") + ViewModel.BorderColor.ToString()[3..];
-            int bold = ViewModel.Bold ? 1 : 0;
-            int italic = ViewModel.Italic ? 1 : 0;
-            int underline = ViewModel.Underline ? 1 : 0;
-
-            StringBuilder outputs = new StringBuilder();
-            outputs.AppendLine("[Script Info]")
-          .AppendLine("ScriptType: v4.00+")
-           .AppendLine("Collisions: Normal")
-           .AppendLine("PlayResX: 1920")
-           .AppendLine("PlayResY: 1080")
-           .AppendLine()
-           .AppendLine("[V4+ Styles]")
-           .AppendLine("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding")
-           .AppendLine($"Style: Default, Microsoft YaHei, {size}, &H{c}, &H{c}, &H{bc}, &H00000000, {bold}, {italic}, {underline}, 0, 100, 100, 0.00, 0.00, 1, {bw}, 0, {al}, {margin}, {margin}, {margin}, 0")
-           .AppendLine()
-           .AppendLine("[Events]")
-           .AppendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text");
-            return outputs;
         }
     }
 }

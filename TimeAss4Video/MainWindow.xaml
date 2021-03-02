@@ -6,12 +6,9 @@
     xmlns:local="clr-namespace:TimeAss4Video"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.modernwpf.com/2019"
-    x:Name="Window"
-    Title="为录像添加时间字幕"
-    Width="1000"
-    Height="600"
-    MinWidth="800"
-    MinHeight="400"
+    x:Name="Window" Title="为录像添加时间字幕"
+    Width="1000" Height="600"
+    MinWidth="800" MinHeight="400"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
     Loaded="Window_Loaded"
@@ -31,8 +28,7 @@
         </Grid.ColumnDefinitions>
         <Viewbox>
             <Grid
-                x:Name="cvs"
-                Width="960"
+                x:Name="cvs" Width="960"
                 Height="540"
                 Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
                 <Grid.Resources>
@@ -45,10 +41,8 @@
                 </Grid.Resources>
                 <TextBlock
                     HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    FontSize="72"
-                    Opacity="0.3"
-                    Text="正在以两倍放大预览" />
+                    VerticalAlignment="Center" FontSize="72"
+                    Opacity="0.3" Text="正在以两倍放大预览" />
                 <local:OutlinedTextBlock
                     x:Name="tbkReview"
                     Margin="{Binding Margin, Converter={StaticResource i2m}}"
@@ -80,11 +74,15 @@
                         CanUserDeleteRows="True"
                         ItemsSource="{Binding Files}">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Binding="{Binding Index}" IsReadOnly="True" Header="分段序号" />
+                            <DataGridTextColumn
+                                Binding="{Binding Index}"
+                                Header="分段序号" IsReadOnly="True" />
                             <DataGridTextColumn Binding="{Binding FilePath}" Header="模板文件" />
                             <DataGridTextColumn Binding="{Binding Length, StringFormat=hh\\:mm\\:ss\\.fff}" Header="视频长度" />
                             <DataGridTextColumn Binding="{Binding StartTime, StringFormat=yyyy-MM-dd HH:mm:ss.fff}" Header="开始时间" />
-                            <DataGridTextColumn Binding="{Binding EndTime, StringFormat=yyyy-MM-dd HH:mm:ss.fff}" IsReadOnly="True" Header="结束时间" />
+                            <DataGridTextColumn
+                                Binding="{Binding EndTime, StringFormat=yyyy-MM-dd HH:mm:ss.fff}"
+                                Header="结束时间" IsReadOnly="True" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -96,12 +94,9 @@
         </GroupBox>
 
         <ui:SimpleStackPanel
-            Grid.RowSpan="99"
-            Grid.Column="2"
-            Margin="12"
-            HorizontalAlignment="Center"
-            Orientation="Horizontal"
-            Spacing="48">
+            Grid.RowSpan="99" Grid.Column="2"
+            Margin="12" HorizontalAlignment="Center"
+            Orientation="Horizontal" Spacing="48">
             <ui:SimpleStackPanel.Resources>
                 <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type TextBox}">
                     <Setter Property="Width" Value="200" />
@@ -201,25 +196,27 @@
                     </ui:SimpleStackPanel>
                 </ScrollViewer>
             </GroupBox>
-            <ui:SimpleStackPanel Orientation="Vertical" Spacing="12">
+            <ui:SimpleStackPanel Orientation="Vertical" Spacing="12" Width="200">
                 <GroupBox Header="分别导出">
-                    <Button
-                        Width="120"
-                        Click="ExportSingleButton_Click"
-                        Content="导出" />
+                    <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
+                        <TextBlock>每个视频将生成同名字幕文件</TextBlock>
+                        <Button
+                            Width="120"
+                            Click="ExportSingleButton_Click"
+                            Content="导出" />
+                    </ui:SimpleStackPanel>
                 </GroupBox>
                 <GroupBox Header="合并导出">
 
                     <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
-
+                        <TextBlock>将根据分段信息将字幕合并后输出</TextBlock>
                         <TextBox
                             ui:ControlHelper.Header="导出地址"
                             MaxLines="5"
                             Text="{Binding OutputPath}"
                             TextWrapping="Wrap" />
                         <Button
-                            Width="120"
-                            VerticalAlignment="Bottom"
+                            Width="120" VerticalAlignment="Bottom"
                             Click="SelectSavePathButton_Click"
                             Content="浏览" />
                         <Button
@@ -228,13 +225,21 @@
                             Content="导出" />
                     </ui:SimpleStackPanel>
                 </GroupBox>
+
+                <GroupBox Header="导入">
+
+                    <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
+                        <TextBlock TextWrapping="Wrap">导入由本软件导出的字幕中包含的分段信息</TextBlock>
+                        <Button
+                            Width="120" Click="Button_Click"
+                            Content="导入" />
+                    </ui:SimpleStackPanel>
+                </GroupBox>
             </ui:SimpleStackPanel>
         </ui:SimpleStackPanel>
         <ui:ContentDialog
-            x:Name="dialog"
-            Title="注意"
-            Grid.RowSpan="999"
-            Grid.ColumnSpan="999"
+            x:Name="dialog" Title="注意"
+            Grid.RowSpan="999" Grid.ColumnSpan="999"
             CloseButtonText="确定">
             <Grid>
                 <Grid.RowDefinitions>

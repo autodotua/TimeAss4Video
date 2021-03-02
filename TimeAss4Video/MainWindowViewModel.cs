@@ -12,7 +12,7 @@ using System.Windows.Media;
 
 namespace TimeAss4Video
 {
-    public class MainWindowViewModel : ViewModelBase
+    public class MainWindowViewModel : ViewModelBase, IAssFormat
     {
         private Timer timer;
 
