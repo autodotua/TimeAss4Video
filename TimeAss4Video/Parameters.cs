@@ -8,6 +8,7 @@ namespace TimeAss4Video
     {
         public const string AssSoftware = "Software=TimeAss4Video";
         public const string AssAuthor = "Author=autodotua";
-        public const string AssFilesInfo = "FilesInfo";
+        public const string AssFiles = "Files";
+        public const string AssFormat = "Format";
     }
 }

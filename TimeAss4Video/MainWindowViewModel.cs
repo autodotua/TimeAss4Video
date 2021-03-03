@@ -1,4 +1,6 @@
-﻿using FzLib.Extension;
+﻿using AutoMapper;
+using FzLib.Extension;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -41,7 +43,7 @@ namespace TimeAss4Video
             if (e.Action == NotifyCollectionChangedAction.Add)
             {
                 var path = (e.NewItems[0] as VideoFileInfo).FilePath;
-                OutputPath = Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path) + ".ass");
+                ExportPath = Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path) + ".ass");
             }
 
             for (int i = 0; i < Files.Count; i++)
@@ -54,12 +56,22 @@ namespace TimeAss4Video
 
         public ObservableCollection<VideoFileInfo> Files { get; } = new ObservableCollection<VideoFileInfo>();
 
-        private string outputPath = "";
+        private string exportPath = "";
 
-        public string OutputPath
+        [JsonIgnore]
+        public string ExportPath
         {
-            get => outputPath;
-            set => this.SetValueAndNotify(ref outputPath, value, nameof(OutputPath));
+            get => exportPath;
+            set => this.SetValueAndNotify(ref exportPath, value, nameof(ExportPath));
+        }
+
+        private string importPath = "";
+
+        [JsonIgnore]
+        public string ImportPath
+        {
+            get => importPath;
+            set => this.SetValueAndNotify(ref importPath, value, nameof(ImportPath));
         }
 
         private string format = "HH:mm:ss";
@@ -162,6 +174,30 @@ namespace TimeAss4Video
         {
             get => underline;
             set => this.SetValueAndNotify(ref underline, value, nameof(Underline));
+        }
+
+        private bool importIncludeFiles = true;
+
+        [JsonIgnore]
+        public bool ImportIncludeFiles
+        {
+            get => importIncludeFiles;
+            set => this.SetValueAndNotify(ref importIncludeFiles, value, nameof(ImportIncludeFiles));
+        }
+
+        private bool importIncludeFormatold = true;
+
+        [JsonIgnore]
+        public bool ImportIncludeFormat
+        {
+            get => importIncludeFormatold;
+            set => this.SetValueAndNotify(ref importIncludeFormatold, value, nameof(ImportIncludeFormat));
+        }
+
+        public AssFormat ToAssFormat()
+        {
+            var config = new MapperConfiguration(cfg => cfg.CreateMap<MainWindowViewModel, AssFormat>());
+            return new Mapper(config).Map<AssFormat>(this);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using AutoMapper;
+using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -143,7 +144,7 @@ namespace TimeAss4Video
             {
                 foreach (var file in ViewModel.Files)
                 {
-                    Export(ViewModel, file);
+                    Export(ViewModel.ToAssFormat(), file, GetAssFileName(file.FilePath));
                 }
             });
             btn.Content = "导出成功";
@@ -166,7 +167,7 @@ namespace TimeAss4Video
         private async void ExportMergeButton_Click(object sender, RoutedEventArgs e)
         {
             PreprocessFiles();
-            if (string.IsNullOrEmpty(ViewModel.OutputPath))
+            if (string.IsNullOrEmpty(ViewModel.ExportPath))
             {
                 await ShowMessageAsync("请设置输出路径");
                 return;
@@ -185,7 +186,7 @@ namespace TimeAss4Video
             btn.IsEnabled = false;
             await Task.Run(() =>
             {
-                Export(ViewModel, ViewModel.Files);
+                Export(ViewModel, ViewModel.Files, GetAssFileName(ViewModel.ExportPath));
             });
             btn.Content = "导出成功";
             await Task.Delay(1000);
@@ -201,11 +202,73 @@ namespace TimeAss4Video
             };
             if (dialog.ShowDialog() == true)
             {
-                ViewModel.OutputPath = dialog.FileName;
+                ViewModel.ExportPath = dialog.FileName;
             }
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private async void Button_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(ViewModel.ImportPath))
+            {
+                await ShowMessageAsync("请先选择导入文件");
+                return;
+            }
+            try
+            {
+                var (files, format) = ImportFromAss(ViewModel.ImportPath);
+                if (ViewModel.ImportIncludeFiles)
+                {
+                    ViewModel.Files.Clear();
+                    foreach (var file in files)
+                    {
+                        ViewModel.Files.Add(file);
+                    }
+                }
+                if (ViewModel.ImportIncludeFormat)
+                {
+                    var config = new MapperConfiguration(cfg => cfg.CreateMap<AssFormat, MainWindowViewModel>());
+                    new Mapper(config).Map(format, ViewModel);
+                }
+            }
+            catch (Exception ex)
+            {
+                await ShowMessageAsync("导入失败：" + ex.Message);
+            }
+        }
+
+        private void ClearFiles_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.Files.Clear();
+        }
+
+        private void DataGrid_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (files.Any(p => File.Exists(p)))
+                {
+                    e.Effects = DragDropEffects.Link;
+                };
+            }
+        }
+
+        private void DataGrid_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+                foreach (var file in files.Where(p => File.Exists(p)))
+                {
+                    ViewModel.Files.Add(new VideoFileInfo()
+                    {
+                        FilePath = file
+                    });
+                }
+            }
+        }
+
+        private void SelectImportPathButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog()
             {
@@ -213,10 +276,26 @@ namespace TimeAss4Video
             };
             if (dialog.ShowDialog() == true)
             {
-                foreach (var file in ImportFromAss(dialog.FileName))
+                ViewModel.ImportPath = dialog.FileName;
+            }
+        }
+
+        private async void HyperlinkButton_Click(object sender, RoutedEventArgs e)
+        {
+            VideoFileInfo file = (sender as FrameworkElement).Tag as VideoFileInfo;
+            try
+            {
+                new Process()
                 {
-                    ViewModel.Files.Add(file);
-                }
+                    StartInfo = new ProcessStartInfo(file.FilePath)
+                    {
+                        UseShellExecute = true
+                    }
+                }.Start();
+            }
+            catch(Exception ex)
+            {
+                await ShowMessageAsync("无法打开该文件：" + ex.Message);
             }
         }
     }

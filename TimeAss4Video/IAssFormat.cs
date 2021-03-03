@@ -14,7 +14,6 @@ namespace TimeAss4Video
         int Interval { get; set; }
         bool Italic { get; set; }
         int Margin { get; set; }
-        string OutputPath { get; set; }
         int Size { get; set; }
         bool Underline { get; set; }
     }

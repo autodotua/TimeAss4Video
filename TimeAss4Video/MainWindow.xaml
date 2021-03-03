@@ -9,6 +9,7 @@
     x:Name="Window" Title="为录像添加时间字幕"
     Width="1000" Height="600"
     MinWidth="800" MinHeight="400"
+    ui:TitleBar.IsIconVisible="True"
     ui:WindowHelper.UseModernWindowStyle="True"
     Closing="Window_Closing"
     Loaded="Window_Loaded"
@@ -69,9 +70,12 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <DataGrid
-                        MaxHeight="240"
+                        MinHeight="120" MaxHeight="240"
+                        AllowDrop="True"
                         AutoGenerateColumns="False"
                         CanUserDeleteRows="True"
+                        DragEnter="DataGrid_DragEnter"
+                        Drop="DataGrid_Drop"
                         ItemsSource="{Binding Files}">
                         <DataGrid.Columns>
                             <DataGridTextColumn
@@ -83,12 +87,20 @@
                             <DataGridTextColumn
                                 Binding="{Binding EndTime, StringFormat=yyyy-MM-dd HH:mm:ss.fff}"
                                 Header="结束时间" IsReadOnly="True" />
+                            <DataGridTemplateColumn IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ui:HyperlinkButton  Click="HyperlinkButton_Click" Tag="{Binding .}">打开视频</ui:HyperlinkButton>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
                 <ui:SimpleStackPanel Orientation="Horizontal" Spacing="12">
-                    <Button Click="AddNewFileButton_Click" Content="浏览" />
+                    <Button Click="AddNewFileButton_Click" Content="浏览 .." />
                     <Button Click="GenerateVideoInfosButton_Click" Content="自动检测开始时间和视频长度" />
+                    <Button Click="ClearFiles_Click" Content="清空" />
                 </ui:SimpleStackPanel>
             </ui:SimpleStackPanel>
         </GroupBox>
@@ -196,46 +208,78 @@
                     </ui:SimpleStackPanel>
                 </ScrollViewer>
             </GroupBox>
-            <ui:SimpleStackPanel Orientation="Vertical" Spacing="12" Width="200">
-                <GroupBox Header="分别导出">
-                    <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
-                        <TextBlock>每个视频将生成同名字幕文件</TextBlock>
-                        <Button
-                            Width="120"
-                            Click="ExportSingleButton_Click"
-                            Content="导出" />
-                    </ui:SimpleStackPanel>
-                </GroupBox>
-                <GroupBox Header="合并导出">
+            <ScrollViewer
+                Padding="0,0,20,0"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <ui:SimpleStackPanel
+                    Width="240" Orientation="Vertical"
+                    Spacing="12">
+                    <GroupBox Header="分别导出">
+                        <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
+                            <TextBlock>每个视频将生成同名字幕文件</TextBlock>
+                            <Button
+                                Width="120"
+                                Click="ExportSingleButton_Click"
+                                Content="导出" />
+                        </ui:SimpleStackPanel>
+                    </GroupBox>
+                    <GroupBox Header="合并导出">
 
-                    <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
-                        <TextBlock>将根据分段信息将字幕合并后输出</TextBlock>
-                        <TextBox
-                            ui:ControlHelper.Header="导出地址"
-                            MaxLines="5"
-                            Text="{Binding OutputPath}"
-                            TextWrapping="Wrap" />
-                        <Button
-                            Width="120" VerticalAlignment="Bottom"
-                            Click="SelectSavePathButton_Click"
-                            Content="浏览" />
-                        <Button
-                            Width="120"
-                            Click="ExportMergeButton_Click"
-                            Content="导出" />
-                    </ui:SimpleStackPanel>
-                </GroupBox>
+                        <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
+                            <TextBlock>将根据分段信息将字幕合并后输出</TextBlock>
+                            <ui:SimpleStackPanel Spacing="8" Orientation="Horizontal">
+                                <TextBox
+                                    MaxLines="5"
+                                    Text="{Binding ExportPath}"
+                                    TextWrapping="Wrap" />
+                                <Button
+                                    VerticalAlignment="Bottom"
+                                    Click="SelectSavePathButton_Click"
+                                    Content="..." />
+                            </ui:SimpleStackPanel>
+                            <Button
+                                Width="120"
+                                Click="ExportMergeButton_Click"
+                                Content="导出" />
+                        </ui:SimpleStackPanel>
+                    </GroupBox>
 
-                <GroupBox Header="导入">
+                    <GroupBox Header="导入">
 
-                    <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
-                        <TextBlock TextWrapping="Wrap">导入由本软件导出的字幕中包含的分段信息</TextBlock>
-                        <Button
-                            Width="120" Click="Button_Click"
-                            Content="导入" />
-                    </ui:SimpleStackPanel>
-                </GroupBox>
-            </ui:SimpleStackPanel>
+                        <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
+                            <TextBlock TextWrapping="Wrap">导入由本软件导出的字幕中包含的分段信息</TextBlock>
+                            <ui:SimpleStackPanel Spacing="8" Orientation="Horizontal">
+                                <TextBox
+                                    MaxLines="5"
+                                    Text="{Binding ImportPath}"
+                                    TextWrapping="Wrap" />
+                                <Button
+                                    VerticalAlignment="Bottom"
+                                    Click="SelectImportPathButton_Click"
+                                    Content="..." />
+                            </ui:SimpleStackPanel>
+                            <ui:SimpleStackPanel Spacing="8" Orientation="Horizontal">
+                                <CheckBox IsChecked="{Binding ImportIncludeFiles}" Content="分段信息" />
+                                <CheckBox IsChecked="{Binding ImportIncludeFormat}" Content="字幕格式" />
+                            </ui:SimpleStackPanel>
+                            <Button
+                                Width="120" Click="Button_Click"
+                                Content="导入">
+                                <Button.Resources>
+                                    <local:BoolOrConverter x:Key="bo" />
+                                </Button.Resources>
+                                <Button.IsEnabled>
+                                    <MultiBinding Converter="{StaticResource bo}">
+                                        <Binding  Path="ImportIncludeFiles" />
+                                        <Binding  Path="ImportIncludeFormat" />
+                                    </MultiBinding>
+                                </Button.IsEnabled>
+                            </Button>
+                        </ui:SimpleStackPanel>
+                    </GroupBox>
+                </ui:SimpleStackPanel>
+            </ScrollViewer>
         </ui:SimpleStackPanel>
         <ui:ContentDialog
             x:Name="dialog" Title="注意"

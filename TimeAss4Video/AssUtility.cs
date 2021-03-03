@@ -42,19 +42,14 @@ namespace TimeAss4Video
             return true;
         }
 
-        public static void Export(IAssFormat format, VideoFileInfo file)
+        public static void Export(IAssFormat format, VideoFileInfo file, string exportPath)
         {
-            Export(format, new[] { file });
+            Export(format, new[] { file }, exportPath);
         }
 
-        public static void Export(IAssFormat format, IList<VideoFileInfo> files)
+        public static void Export(IAssFormat format, IList<VideoFileInfo> files, string path)
         {
-            Export(format, files, format.OutputPath);
-        }
-
-        public static void Export(IAssFormat format, IList<VideoFileInfo> files, string outputPath)
-        {
-            Debug.Assert(!string.IsNullOrEmpty(outputPath));
+            Debug.Assert(!string.IsNullOrEmpty(path));
             StringBuilder outputs = GetAssHead(format, files);
 
             string timespanFormat = "hh\\:mm\\:ss\\:ff";
@@ -85,12 +80,16 @@ namespace TimeAss4Video
                 }
                 totalTime += file.Length;
             }
-            string path = Path.Combine(Path.GetDirectoryName(outputPath), Path.GetFileNameWithoutExtension(outputPath) + ".ass");
             if (!Directory.Exists(Path.GetDirectoryName(path)))
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
             }
             File.WriteAllText(path, outputs.ToString());
+        }
+
+        public static string GetAssFileName(string path)
+        {
+            return Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path) + ".ass");
         }
 
         public static StringBuilder GetAssHead(IAssFormat format, IList<VideoFileInfo> files)
@@ -109,7 +108,8 @@ namespace TimeAss4Video
             outputs.AppendLine("[Script Info]")
           .AppendLine("; " + Parameters.AssSoftware)
           .AppendLine("; " + Parameters.AssAuthor)
-          .AppendLine($"; {Parameters.AssFilesInfo }={JsonConvert.SerializeObject(files)}")
+          .AppendLine($"; {Parameters.AssFiles }={JsonConvert.SerializeObject(files)}")
+          .AppendLine($"; {Parameters.AssFormat }={JsonConvert.SerializeObject(format)}")
           .AppendLine("ScriptType: v4.00+")
            .AppendLine("Collisions: Normal")
            .AppendLine("PlayResX: 1920")
@@ -124,21 +124,31 @@ namespace TimeAss4Video
             return outputs;
         }
 
-        public static List<VideoFileInfo> ImportFromAss(string path)
+        public static (List<VideoFileInfo> files, AssFormat format) ImportFromAss(string path)
         {
             string assText = File.ReadAllText(path);
             if (!assText.Contains(Parameters.AssSoftware))
             {
                 throw new Exception("非本软件生成的ASS不可导入");
             }
-            var match = Regex.Match(assText, $@"{Parameters.AssFilesInfo }=(?<Json>.+){Environment.NewLine}");
-            if(match==null || match.Success==false)
+            var match = Regex.Match(assText, $@"{Parameters.AssFiles }=(?<Json>.+){Environment.NewLine}");
+            if (match == null || match.Success == false)
             {
-                throw new Exception("找不到文件信息");
+                throw new Exception("ASS格式错误");
             }
             string json = match.Groups["Json"].Value;
 
-            return JsonConvert.DeserializeObject<List<VideoFileInfo>>(json);
+            var files = JsonConvert.DeserializeObject<List<VideoFileInfo>>(json);
+
+            match = Regex.Match(assText, $@"{Parameters.AssFormat }=(?<Json>.+){Environment.NewLine}");
+            if (match == null || match.Success == false)
+            {
+                throw new Exception("ASS格式错误");
+            }
+            json = match.Groups["Json"].Value;
+
+            var format = JsonConvert.DeserializeObject<AssFormat>(json);
+            return (files, format);
         }
     }
 }
