@@ -62,7 +62,10 @@ namespace TimeAss4Video
         public async Task ShowMessageAsync(string message)
         {
             tbkDialogMessage.Text = message;
-            await dialog.ShowAsync();
+            if (!dialog.IsVisible)
+            {
+                await dialog.ShowAsync();
+            }
         }
 
         private void AddNewFileButton_Click(object sender, RoutedEventArgs e)
@@ -283,6 +286,7 @@ namespace TimeAss4Video
         private async void HyperlinkButton_Click(object sender, RoutedEventArgs e)
         {
             VideoFileInfo file = (sender as FrameworkElement).Tag as VideoFileInfo;
+            (sender as FrameworkElement).IsEnabled = false;
             try
             {
                 new Process()
@@ -293,10 +297,18 @@ namespace TimeAss4Video
                     }
                 }.Start();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 await ShowMessageAsync("无法打开该文件：" + ex.Message);
             }
+            await Task.Delay(1000);
+            (sender as FrameworkElement).IsEnabled = true;
+        }
+
+        private void AppBarButton_Click(object sender, RoutedEventArgs e)
+        {
+            dataGrid.CurrentCell = new DataGridCellInfo((sender as FrameworkElement).Tag, dataGrid.Columns[1]);
+            dataGrid.BeginEdit();
         }
     }
 }

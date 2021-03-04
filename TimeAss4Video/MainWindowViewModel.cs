@@ -40,10 +40,20 @@ namespace TimeAss4Video
 
         private void Files_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            if (e.Action == NotifyCollectionChangedAction.Add)
+            if (e.Action == NotifyCollectionChangedAction.Add && Files.Count == 1)
             {
                 var path = (e.NewItems[0] as VideoFileInfo).FilePath;
-                ExportPath = Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path) + ".ass");
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    return;
+                }
+                try
+                {
+                    ExportPath = Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path) + ".ass");
+                }
+                catch
+                {
+                }
             }
 
             for (int i = 0; i < Files.Count; i++)

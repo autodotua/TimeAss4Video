@@ -70,30 +70,54 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <DataGrid
-                        MinHeight="120" MaxHeight="240"
-                        AllowDrop="True"
+                        x:Name="dataGrid" MinHeight="120"
+                        MaxHeight="240" AllowDrop="True"
                         AutoGenerateColumns="False"
                         CanUserDeleteRows="True"
                         DragEnter="DataGrid_DragEnter"
                         Drop="DataGrid_Drop"
                         ItemsSource="{Binding Files}">
+                        <DataGrid.Resources>
+                            <local:NotNull2BoolConverter x:Key="nn2b" />
+                            <local:DataGridNewItemPlaceholder2InvisiableConverter x:Key="nip2v" />
+                        </DataGrid.Resources>
                         <DataGrid.Columns>
                             <DataGridTextColumn
                                 Binding="{Binding Index}"
                                 Header="分段序号" IsReadOnly="True" />
-                            <DataGridTextColumn Binding="{Binding FilePath}" Header="模板文件" />
+                            <DataGridTemplateColumn Header="文件地址">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ui:SimpleStackPanel Orientation="Horizontal">
+
+                                            <ui:AppBarButton
+                                                Click="AppBarButton_Click" Icon="Edit"
+                                                IsCompact="True"
+                                                Visibility="{Binding Path=., Converter={StaticResource nip2v}}"
+                                                LabelPosition="Collapsed"
+                                                Tag="{Binding .}">
+                                                <ui:AppBarButton.LayoutTransform>
+                                                    <ScaleTransform ScaleX="0.75" ScaleY="0.75" />
+                                                </ui:AppBarButton.LayoutTransform>
+                                            </ui:AppBarButton>
+                                            <ui:HyperlinkButton
+                                                Click="HyperlinkButton_Click"
+                                                Content="{Binding FilePath}"
+                                                Tag="{Binding .}" />
+                                        </ui:SimpleStackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding FilePath}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Binding="{Binding Length, StringFormat=hh\\:mm\\:ss\\.fff}" Header="视频长度" />
                             <DataGridTextColumn Binding="{Binding StartTime, StringFormat=yyyy-MM-dd HH:mm:ss.fff}" Header="开始时间" />
                             <DataGridTextColumn
                                 Binding="{Binding EndTime, StringFormat=yyyy-MM-dd HH:mm:ss.fff}"
                                 Header="结束时间" IsReadOnly="True" />
-                            <DataGridTemplateColumn IsReadOnly="True">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <ui:HyperlinkButton  Click="HyperlinkButton_Click" Tag="{Binding .}">打开视频</ui:HyperlinkButton>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -228,7 +252,7 @@
 
                         <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
                             <TextBlock>将根据分段信息将字幕合并后输出</TextBlock>
-                            <ui:SimpleStackPanel Spacing="8" Orientation="Horizontal">
+                            <ui:SimpleStackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBox
                                     MaxLines="5"
                                     Text="{Binding ExportPath}"
@@ -249,7 +273,7 @@
 
                         <ui:SimpleStackPanel Orientation="Vertical" Spacing="8">
                             <TextBlock TextWrapping="Wrap">导入由本软件导出的字幕中包含的分段信息</TextBlock>
-                            <ui:SimpleStackPanel Spacing="8" Orientation="Horizontal">
+                            <ui:SimpleStackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBox
                                     MaxLines="5"
                                     Text="{Binding ImportPath}"
@@ -259,9 +283,9 @@
                                     Click="SelectImportPathButton_Click"
                                     Content="..." />
                             </ui:SimpleStackPanel>
-                            <ui:SimpleStackPanel Spacing="8" Orientation="Horizontal">
-                                <CheckBox IsChecked="{Binding ImportIncludeFiles}" Content="分段信息" />
-                                <CheckBox IsChecked="{Binding ImportIncludeFormat}" Content="字幕格式" />
+                            <ui:SimpleStackPanel Orientation="Horizontal" Spacing="8">
+                                <CheckBox Content="分段信息" IsChecked="{Binding ImportIncludeFiles}" />
+                                <CheckBox Content="字幕格式" IsChecked="{Binding ImportIncludeFormat}" />
                             </ui:SimpleStackPanel>
                             <Button
                                 Width="120" Click="Button_Click"
@@ -271,8 +295,8 @@
                                 </Button.Resources>
                                 <Button.IsEnabled>
                                     <MultiBinding Converter="{StaticResource bo}">
-                                        <Binding  Path="ImportIncludeFiles" />
-                                        <Binding  Path="ImportIncludeFormat" />
+                                        <Binding Path="ImportIncludeFiles" />
+                                        <Binding Path="ImportIncludeFormat" />
                                     </MultiBinding>
                                 </Button.IsEnabled>
                             </Button>
