@@ -14,6 +14,11 @@ namespace TimeAss4Video
     {
         public static bool AutoGenerateVideoInfo(IAssFormat format, VideoFileInfo file)
         {
+            if (new[] { "jpg", "tif", "raw", "png", "dng", "arw", "nef", "cr2", "rw2" }.Contains(file.File.Extension.ToLower().TrimStart('.')))
+            {
+                file.StartTime = file.File.LastWriteTime;
+                return true;
+            }
             ProcessStartInfo startInfo = new ProcessStartInfo()
             {
                 UseShellExecute = false,
@@ -42,12 +47,12 @@ namespace TimeAss4Video
             return true;
         }
 
-        public static void Export(IAssFormat format, VideoFileInfo file, string exportPath)
+        public static void Export(IAssFormat format, IVideoFileInfo file, string exportPath)
         {
             Export(format, new[] { file }, exportPath);
         }
 
-        public static void Export(IAssFormat format, IList<VideoFileInfo> files, string path)
+        public static void Export(IAssFormat format, IList<IVideoFileInfo> files, string path)
         {
             Debug.Assert(!string.IsNullOrEmpty(path));
             StringBuilder outputs = GetAssHead(format, files);
@@ -70,9 +75,9 @@ namespace TimeAss4Video
                  .Append(",")
                  .Append((totalTime + nextTime).ToString(timespanFormat))
                  .Append(",Default,,0000,0000,0000,,")
-                 .Append((file.StartTime.Value + currentTime).ToString(format.Format))
+                 .Append((file.StartTime.Value + currentTime * file.Ratio).ToString(format.Format))
                  .AppendLine();
-                    if (nextTime == file.Length)
+                    if (nextTime >= file.Length)
                     {
                         break;
                     }
@@ -92,7 +97,7 @@ namespace TimeAss4Video
             return Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path) + ".ass");
         }
 
-        public static StringBuilder GetAssHead(IAssFormat format, IList<VideoFileInfo> files)
+        public static StringBuilder GetAssHead(IAssFormat format, IList<IVideoFileInfo> files)
         {
             int size = format.Size;
             int margin = format.Margin;

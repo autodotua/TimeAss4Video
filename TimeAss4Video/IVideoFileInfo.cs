@@ -8,5 +8,6 @@ namespace TimeAss4Video
         string FilePath { get; set; }
         TimeSpan Length { get; set; }
         DateTime? StartTime { get; set; }
+        public double Ratio { get; set; }
     }
 }

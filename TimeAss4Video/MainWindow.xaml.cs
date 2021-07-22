@@ -189,7 +189,7 @@ namespace TimeAss4Video
             btn.IsEnabled = false;
             await Task.Run(() =>
             {
-                Export(ViewModel, ViewModel.Files, GetAssFileName(ViewModel.ExportPath));
+                Export(ViewModel, ViewModel.Files.Cast<IVideoFileInfo>().ToList(), GetAssFileName(ViewModel.ExportPath));
             });
             btn.Content = "导出成功";
             await Task.Delay(1000);

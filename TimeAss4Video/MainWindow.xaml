@@ -74,7 +74,7 @@
                         MaxHeight="240" AllowDrop="True"
                         AutoGenerateColumns="False"
                         CanUserDeleteRows="True"
-                        DragEnter="DataGrid_DragEnter"
+                        DragEnter="DataGrid_DragEnter"  SelectionMode="Single"
                         Drop="DataGrid_Drop"
                         ItemsSource="{Binding Files}">
                         <DataGrid.Resources>
@@ -115,6 +115,7 @@
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Binding="{Binding Length, StringFormat=hh\\:mm\\:ss\\.fff}" Header="视频长度" />
                             <DataGridTextColumn Binding="{Binding StartTime, StringFormat=yyyy-MM-dd HH:mm:ss.fff}" Header="开始时间" />
+                            <DataGridTextColumn Binding="{Binding Ratio}" Header="速率" />
                             <DataGridTextColumn
                                 Binding="{Binding EndTime, StringFormat=yyyy-MM-dd HH:mm:ss.fff}"
                                 Header="结束时间" IsReadOnly="True" />
@@ -123,7 +124,7 @@
                 </Grid>
                 <ui:SimpleStackPanel Orientation="Horizontal" Spacing="12">
                     <Button Click="AddNewFileButton_Click" Content="浏览 .." />
-                    <Button Click="GenerateVideoInfosButton_Click" Content="自动检测开始时间和视频长度" />
+                    <Button Click="GenerateVideoInfosButton_Click" Content="自动检测开始时间和长度" />
                     <Button Click="ClearFiles_Click" Content="清空" />
                 </ui:SimpleStackPanel>
             </ui:SimpleStackPanel>

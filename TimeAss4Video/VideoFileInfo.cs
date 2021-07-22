@@ -1,4 +1,4 @@
-﻿using FzLib.Extension;
+﻿using FzLib;
 using Newtonsoft.Json;
 using System;
 using System.ComponentModel;
@@ -48,8 +48,23 @@ namespace TimeAss4Video
             set => this.SetValueAndNotify(ref index, value, nameof(Index));
         }
 
+        private double ratio = 1;
+
+        public double Ratio
+        {
+            get => ratio;
+            set
+            {
+                if (value > 0)
+                {
+                    ratio = value;
+                }
+                this.Notify(nameof(Ratio), nameof(EndTime));
+            }
+        }
+
         [JsonIgnore]
-        public DateTime? EndTime => StartTime.HasValue ? StartTime + Length : null;
+        public DateTime? EndTime => StartTime.HasValue ? StartTime + Length * Ratio : null;
 
         public event PropertyChangedEventHandler PropertyChanged;
     }
